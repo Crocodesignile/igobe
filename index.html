@@ -807,6 +807,35 @@ const frame = (now) => {
   }
 }
 requestAnimationFrame(frame)
+
+/* ---------- ?debug: a small live readout for checking on a phone ---------- */
+if (new URLSearchParams(location.search).has('debug')) {
+  const box = document.createElement('pre')
+  box.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;margin:0;padding:8px 10px;max-width:calc(100vw - 16px);white-space:pre-wrap;font:11px/1.4 ui-monospace,Menlo,monospace;color:#fff;background:rgba(0,0,0,.72);border-radius:6px;pointer-events:none'
+  document.body.appendChild(box)
+  const errs = []
+  addEventListener('error', (e) => errs.push(String(e.message || e)))
+  addEventListener('unhandledrejection', (e) => errs.push('promise: ' + String(e.reason)))
+  let loops = 0
+  const count = () => { loops++; requestAnimationFrame(count) }
+  requestAnimationFrame(count)
+  setInterval(() => {
+    let n = 0
+    for (let i = 0; i < N; i++) n += loaded[i]
+    box.textContent = [
+      'winY ' + Math.round(window.scrollY) + '  docTop ' + Math.round(document.documentElement.scrollTop) + '  bodyTop ' + Math.round(document.body.scrollTop),
+      'scroller ' + (document.scrollingElement && document.scrollingElement.tagName) + '  used ' + Math.round(scrollPos()),
+      'film t ' + cur.toFixed(2) + ' / ' + DURATION.toFixed(1) + '  frame ' + Math.round(cur * FPS) + '  drawn ' + lastF.toFixed(1),
+      'loaded ' + n + ' / ' + N + '  inflight ' + inflight + '  queue ' + qi,
+      'anchors ' + anchors.map((a) => Math.round(a[0]) + ':' + a[1]).join(' '),
+      'canvas ' + canvas.width + 'x' + canvas.height + '  live ' + live + '  dir ' + (window.__FRAMES ? 'inline' : FRAME_DIR),
+      'rAF/s ' + loops * 2 + '  vh ' + innerHeight + '  dpr ' + devicePixelRatio,
+      errs.length ? 'ERR ' + errs.slice(-3).join(' | ') : 'no errors',
+      navigator.userAgent.replace(/^Mozilla\/5.0 /, '').slice(0, 90),
+    ].join('\n')
+    loops = 0
+  }, 500)
+}
 </script>
 </body>
 </html>
