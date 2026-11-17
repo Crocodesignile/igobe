@@ -351,6 +351,43 @@
   }
 }
 
+@layer components {
+  /* ---------- splash ---------- */
+  html.is-loading, html.is-loading body { overflow: hidden; }
+  .splash {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 18px;
+    background: var(--bg);
+    color: var(--ink);
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 1s var(--ease-expo);
+    &.is-leaving { clip-path: inset(0 0 100% 0); }
+  }
+  .splash__run {
+    width: min(58vw, 340px);
+    height: auto;
+    transition: opacity .5s ease, translate 1s var(--ease-expo);
+  }
+  .splash.is-leaving .splash__run { opacity: 0; translate: 0 -24px; }
+  .splash__count {
+    margin: 0;
+    color: var(--ink-64);
+    font-variant-numeric: tabular-nums;
+    min-width: 3ch;
+    text-align: center;
+    transition: opacity .4s ease;
+  }
+  .splash.is-leaving .splash__count { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .splash { transition: opacity .6s ease; &.is-leaving { clip-path: none; opacity: 0; } }
+  }
+}
+
 @layer utilities {
   .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -376,6 +413,21 @@
 </style>
 </head>
 <body>
+
+<!-- splash: two jackals run while the film frames download; it lifts away when enough of the film is in -->
+<div class="splash" id="splash" role="status" aria-live="polite" aria-label="IGOBE 불러오는 중">
+  <canvas class="splash__run" width="480" height="260" aria-hidden="true"></canvas>
+  <p class="splash__count t-ui" aria-hidden="true"><span class="splash__num">0</span></p>
+  <div class="splash__frames" hidden>
+    <img src="assets/jackal/j1.webp" alt="" width="480" height="260">
+    <img src="assets/jackal/j2.webp" alt="" width="480" height="260">
+    <img src="assets/jackal/j3.webp" alt="" width="480" height="260">
+    <img src="assets/jackal/j4.webp" alt="" width="480" height="260">
+    <img src="assets/jackal/j5.webp" alt="" width="480" height="260">
+    <img src="assets/jackal/j6.webp" alt="" width="480" height="260">
+    <img src="assets/jackal/j7.webp" alt="" width="480" height="260">
+  </div>
+</div>
 
 <div id="stage" aria-hidden="true">
   <canvas id="plate" class="plate"></canvas>
@@ -752,8 +804,64 @@ const ready = () => {
   readyAt = performance.now()
   needMeasure = true
 }
-;(document.fonts?.ready ?? Promise.resolve()).then(ready)
-setTimeout(ready, 2500)
+
+/* ---------- splash: jackals run until enough of the film is in, then the screen lifts ----------
+   "Enough" is the coarse passes of the loading order (every 6th frame), so the whole film scrubs
+   without gaps from the start; the rest fills in behind. Shown at least 1.4 s, at most 9 s. */
+{
+  const splash = $('#splash')
+  const run = splash.querySelector('.splash__run')
+  const rctx = run.getContext('2d')
+  const num = splash.querySelector('.splash__num')
+  const jackals = [...splash.querySelectorAll('.splash__frames img')]
+  const needed = order.findIndex((i) => i % 6 !== 0)  // every 6th frame: the film already scrubs whole
+  const need = needed > 0 ? needed : order.length
+  const t0 = performance.now()
+  let fontsIn = false
+  ;(document.fonts?.ready ?? Promise.resolve()).then(() => (fontsIn = true))
+  root.classList.add('is-loading')
+  let k = 0
+  let lastSwap = 0
+  let shown = 0
+  let leaving = false
+  const tick = (now) => {
+    if (leaving) return
+    requestAnimationFrame(tick)
+    // the jackals, in ink, 12 frames a second (one still frame when motion is reduced)
+    if ((now - lastSwap > 1000 / 12 || lastSwap === 0) && (!reduced || lastSwap === 0)) {
+      lastSwap = now
+      const im = jackals[k % jackals.length]
+      if (im.complete && im.naturalWidth) {
+        rctx.clearRect(0, 0, run.width, run.height)
+        rctx.globalCompositeOperation = 'source-over'
+        rctx.drawImage(im, 0, 0, run.width, run.height)
+        rctx.globalCompositeOperation = 'source-in'
+        rctx.fillStyle = getComputedStyle(root).getPropertyValue('--ink').trim() || '#2a2520'
+        rctx.fillRect(0, 0, run.width, run.height)
+        k++
+      }
+    }
+    let got = 0
+    for (let i = 0; i < need; i++) got += loaded[order[i]]
+    const target = Math.round((got / need) * 100)
+    shown += (target - shown) * 0.18
+    if (target - shown < 0.5) shown = target
+    num.textContent = String(Math.round(shown))
+    const elapsed = now - t0
+    const done = (got >= need && Math.round(shown) >= 100) || elapsed > 9000
+    if (done && elapsed > 1400 && (fontsIn || elapsed > 2500)) leave()
+  }
+  const leave = () => {
+    leaving = true
+    num.textContent = '100'
+    splash.classList.add('is-leaving')
+    root.classList.remove('is-loading')
+    needMeasure = true
+    ready()
+    setTimeout(() => splash.remove(), 1100)
+  }
+  requestAnimationFrame(tick)
+}
 
 /* ---------- the one loop ---------- */
 let last = performance.now()
