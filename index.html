@@ -16,7 +16,7 @@
   Structure after the "Orla." reference prompt: one fixed film plate scrubbed by scroll,
   a large wordmark on the first screen that shrinks to the top-left corner, pinned chapters whose words rise and fall
   with the scroll, and a white shop the film fades into.
-  Film: IGOBE_film_v4_4K (24 s) → 12 fps WebP frames, 3200px, quality 75, drawn to one canvas.
+  Film: IGOBE_film_v4_4K (24 s) → 12 fps WebP frames, 2560px, quality 75, drawn to one canvas.
   Latin type: Switzer. Korean: Pretendard (Switzer has no Hangul).
 */
 @layer reset, tokens, base, layout, components, motion, utilities;
@@ -600,8 +600,8 @@ const stage = $('#stage')
 const canvas = $('#plate')
 const ctx = canvas.getContext('2d', { alpha: false })
 let live = false
-// the stills' own size: phones 720×1280 (centre crop), everything else 3200×1800
-const SRC = window.__FRAMES || !PHONE ? { w: 3200, h: 1800 } : { w: 720, h: 1280 }
+// the stills' own size: phones 720×1280 (centre crop), everything else 2560×1440
+const SRC = window.__FRAMES || !PHONE ? { w: 2560, h: 1440 } : { w: 720, h: 1280 }
 // always cover; on portrait screens this crops to the middle of the frame, where the models stand
 const coverBox = (W, H) => {
   const s = Math.max(W / SRC.w, H / SRC.h)
@@ -611,13 +611,14 @@ const coverBox = (W, H) => {
 }
 
 /* ---------- a small window of decoded stills around the playhead ---------- */
-const bmp = new Map()          // frame index → ImageBitmap at cover size
+const bmp = new Map()          // frame index → decoded ImageBitmap
 const pending = new Set()
 let bmpKey = ''
 let bmpInflight = 0
-const AHEAD = PHONE ? 6 : 8    // decoded ahead of the playhead, in the direction of travel
-const BEHIND = PHONE ? 3 : 4
-const KEEP = PHONE ? 10 : 13   // anything further away is released
+const AHEAD = PHONE ? 6 : 6    // decoded beyond where the film is heading
+const BEHIND = PHONE ? 3 : 3
+const SPAN = PHONE ? 24 : 16   // at most this many stills kept decoded at once (desktop stills are 15 MB decoded)
+const MAX_DECODES = PHONE ? 4 : 6
 let travel = 1
 const resetBitmaps = () => {
   for (const b of bmp.values()) b.close?.()
@@ -625,25 +626,33 @@ const resetBitmaps = () => {
   bmpKey = canvas.width + 'x' + canvas.height
 }
 const want = (i) => {
-  if (i < 0 || i >= N || bmp.has(i) || pending.has(i) || !loaded[i] || bmpInflight >= 4) return
+  if (i < 0 || i >= N || bmp.has(i) || pending.has(i) || !loaded[i] || bmpInflight >= MAX_DECODES) return
   const key = bmpKey
-  const r = coverBox(canvas.width, canvas.height)
   pending.add(i)
   bmpInflight++
-  createImageBitmap(blobs[i], { resizeWidth: r.w, resizeHeight: r.h, resizeQuality: 'medium' })
+  // decoded at the still's own size: resizing inside createImageBitmap blocked the page on large stills,
+  // while scaling at draw time is cheap (the canvas does it on the graphics card)
+  createImageBitmap(blobs[i])
     .then((b) => { if (key === bmpKey) { bmp.set(i, b); dirty = true } else b.close?.() })
     .catch(() => {})
     .finally(() => { pending.delete(i); bmpInflight-- })
 }
-const prefetch = (f) => {
+// decode along the path the film is about to travel: from where it is (f) to where the scroll
+// already is (t, the easing target), then a little beyond; nearest first
+const prefetch = (f, t) => {
   if ((canvas.width + 'x' + canvas.height) !== bmpKey) resetBitmaps()
   const c = Math.round(f)
-  want(c)
-  for (let d = 1; d <= Math.max(AHEAD, BEHIND); d++) {
-    if (d <= AHEAD) want(c + d * travel)
-    if (d <= BEHIND) want(c - d * travel)
-  }
-  for (const [i, b] of bmp) if (Math.abs(i - c) > KEEP) { b.close?.(); bmp.delete(i) }
+  const goal = Math.round(t)
+  const dir = goal === c ? travel : Math.sign(goal - c)
+  const far = clamp(goal + dir * AHEAD, 0, N - 1)
+  // skip ahead if the trip is longer than we can hold: the frames nearest the goal matter most
+  let from = c
+  if (Math.abs(far - c) > SPAN - BEHIND) from = far - dir * (SPAN - BEHIND)
+  for (let i = from; dir > 0 ? i <= far : i >= far; i += dir) want(i)
+  for (let d = 1; d <= BEHIND; d++) want(from - d * dir)
+  const lo = Math.min(from, far) - BEHIND - 1
+  const hi = Math.max(from, far) + BEHIND + 1
+  for (const [i, b] of bmp) if ((i < lo || i > hi) && i !== c) { b.close?.(); bmp.delete(i) }
 }
 // the closest decoded still to frame i (keeps the last picture rather than drawing nothing)
 const source = (i) => {
@@ -655,15 +664,16 @@ const source = (i) => {
 }
 const blit = (b) => {
   const r = coverBox(canvas.width, canvas.height)
-  if (b.width === r.w && b.height === r.h) ctx.drawImage(b, r.x, r.y)
-  else ctx.drawImage(b, r.x, r.y, r.w, r.h)   // a browser that ignored the resize option
+  ctx.drawImage(b, r.x, r.y, r.w, r.h)
 }
+let shownFrame = -1
 const draw = (f) => {
   const a = Math.floor(f)
   const sa = source(a)
   if (!sa) return false
   ctx.globalAlpha = 1
   blit(sa.im)
+  shownFrame = sa.i
   // blend into the next still, so 12 fps scrubs smoothly (only when both are decoded)
   const k = f - a
   if (sa.i === a && k > 0.02 && bmp.has(a + 1)) {
@@ -921,12 +931,12 @@ const frame = (now) => {
     // Reduce Motion on (iPhone 동작 줄이기); there it just skips the easing and tracks the scroll exactly
     const target = filmTime(y)
     if (reduced) cur = target
-    else cur += (target - cur) * (1 - Math.exp(-dt * 8))
+    else cur += (target - cur) * (1 - Math.exp(-dt * 12))
     if (Math.abs(target - cur) < 0.002) cur = target
     const f = clamp(cur * FPS, 0, N - 1)
     if (f > lastF + 0.01) travel = 1
     else if (f < lastF - 0.01) travel = -1
-    prefetch(f)
+    prefetch(f, clamp(target * FPS, 0, N - 1))
     if (dirty || Math.abs(f - lastF) > 0.001) {
       if (draw(f)) {
         lastF = f
@@ -981,6 +991,7 @@ requestAnimationFrame(frame)
 
 /* ---------- ?debug: a small live readout for checking on a phone ---------- */
 if (new URLSearchParams(location.search).has('debug')) {
+  window.__film = () => ({ cur, lastF, shownFrame, target: filmTime(Math.max(0, scrollPos())), bitmaps: bmp.size, pending: pending.size })
   const box = document.createElement('pre')
   box.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;margin:0;padding:8px 10px;max-width:calc(100vw - 16px);white-space:pre-wrap;font:11px/1.4 ui-monospace,Menlo,monospace;color:#fff;background:rgba(0,0,0,.72);border-radius:6px;pointer-events:none'
   document.body.appendChild(box)
