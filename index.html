@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IGOBE — Sculptural solid perfume</title>
+<meta name="description" content="모래 아래 잠든 유물을 손에 쥐는 향. 세 명의 파라오에게서 태어난 피라미드 모양의 고체 향수, IGOBE.">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@300,400,500&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+/*
+  IGOBE — scroll film
+  Structure after the "Orla." reference prompt: one fixed film plate scrubbed by scroll,
+  a large wordmark on the first screen that shrinks to the top-left corner, pinned chapters whose words rise and fall
+  with the scroll, and a white shop the film fades into.
+  Film: IGOBE_film_v4_4K (24 s) → 12 fps WebP frames, 3200px, quality 75, drawn to one canvas.
+  Latin type: Switzer. Korean: Pretendard (Switzer has no Hangul).
+*/
+@layer reset, tokens, base, layout, components, motion, utilities;
+
+@property --brand-min-h { syntax: '<length>'; inherits: true; initial-value: 72px; }
+
+@font-face {
+  font-family: "Switzer Fallback";
+  src: local("Arial");
+  ascent-override: 96.67%;
+  descent-override: 24.66%;
+  line-gap-override: 8.88%;
+  size-adjust: 101.38%;
+}
+
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, ul, figure { margin: 0; padding: 0; }
+  ul { list-style: none; }
+  img, canvas, svg { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+}
+
+@layer tokens {
+  :root {
+    /* 색 — 잉크 한 가지와 그 투명도만 씁니다 */
+    --ink: #2a2520;
+    --bg: #fff;
+    --ghost: #ededed;
+    --ink-88: color-mix(in srgb, var(--ink) 88%, transparent);
+    --ink-64: color-mix(in srgb, var(--ink) 64%, transparent);
+    --ink-48: color-mix(in srgb, var(--ink) 48%, transparent);
+    --ink-32: color-mix(in srgb, var(--ink) 32%, transparent);
+    --ink-24: color-mix(in srgb, var(--ink) 24%, transparent);
+    --ink-08: color-mix(in srgb, var(--ink) 8%, transparent);
+
+    --pad-x: max(16px, 2.7211vw);
+    --pad-y: max(16px, 2.1769vw);
+    --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --in-y: 12px; --in-blur: 8px; --out-y: 12px; --out-blur: 8px;
+    --hero-runway: 80svh;
+    --chapter-runway: 180svh;
+    --measure-lead: 480px; --measure-body: 420px; --measure-h1: 580px;
+
+    --fs-display: clamp(80px, 16.667vw, 240px);
+    --fs-ui: 14px;
+    --lh-ui: 1.7;
+    --brand-min-h: calc(3 * var(--fs-ui) * var(--lh-ui));
+
+    --font: 'Switzer', 'Switzer Fallback', 'Pretendard', 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  }
+  @media (pointer: coarse) { :root { --fs-ui: 16px; } }
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--ink);
+    overscroll-behavior: none;
+    overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-family: var(--font);
+    font-weight: 300;
+    font-size: clamp(16px, 1.667vw, 20px);
+    line-height: 1.45;
+    letter-spacing: -.02em;
+    overscroll-behavior: none;
+    overflow-x: clip;
+    word-break: keep-all;
+  }
+  a, button { touch-action: manipulation; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+
+  /* type scale — hierarchy is ink alpha, never a second colour or caps */
+  .t-display { font-size: var(--fs-display); line-height: .92; letter-spacing: -.055em; font-weight: 300; }
+  .t-h1 { font-size: clamp(30px, 3.333vw, 48px); line-height: 1.25; letter-spacing: -.03em; font-weight: 300; }
+  .t-h2 { font-size: clamp(24px, 4.667vw, 56px); line-height: 1.15; letter-spacing: -.025em; font-weight: 300; }
+  .t-lead { font-size: clamp(20px, 2.222vw, 32px); line-height: 1.3; letter-spacing: -.025em; }
+  .t-body-lg { font-size: clamp(18px, 2vw, 24px); line-height: 1.45; letter-spacing: -.03em; }
+  .t-body { font-size: clamp(16px, 1.667vw, 20px); line-height: 1.45; letter-spacing: -.02em; }
+  .t-title { font-size: 16px; line-height: 1.5; letter-spacing: -.01em; font-weight: 400; }
+  .t-small { font-size: 14px; line-height: 1.7; letter-spacing: -.01em; font-weight: 400; }
+  .t-ui { font-size: var(--fs-ui); line-height: var(--lh-ui); letter-spacing: 0; font-weight: 500; }
+  /* 한글 문장은 라틴 자간을 그대로 쓰면 너무 붙어서, 조금 풀어 줍니다 */
+  .kr { letter-spacing: -.015em; }
+  .is-ghost { color: var(--ghost); }
+  .is-demoted { color: var(--ink-64); }
+  .is-muted { color: var(--ink-32); }
+}
+
+@layer layout {
+  /* the film plate, fixed behind everything */
+  #stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: calc(1 - var(--stage-out, 0));
+    &.is-blurring { filter: blur(calc(var(--stage-out, 0) * 24px)); }
+    &.is-covered { visibility: hidden; }
+  }
+  .plate {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 240ms linear;
+    &.is-live { opacity: 1; }
+  }
+
+  /* fixed chrome: the wordmark and the burger */
+  .chrome {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: var(--pad-y) var(--pad-x);
+    pointer-events: none;
+  }
+
+  /* no z-index on main: a stacking context there would isolate the blend from the film */
+  main { position: relative; }
+  .shop { position: relative; }
+
+  .hero { height: calc(100svh + var(--hero-runway)); }
+  .hero__stage {
+    position: sticky;
+    top: 0;
+    min-height: 100svh;
+    padding: var(--pad-y) var(--pad-x);
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+    grid-template-rows: auto 1fr auto;
+    column-gap: 24px;
+  }
+  .hero__nav { grid-area: 1 / 2; align-self: start; display: flex; flex-direction: column; align-items: flex-start; }
+  /* the big wordmark stands in this slot (it is fixed, the slot only keeps its room); the lede follows */
+  .hero__mark { grid-area: 2 / 1; align-self: end; height: var(--mark-h, 18svh); margin-bottom: 28px; }
+  .hero__foot {
+    grid-area: 3 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .hero__lede { max-width: var(--measure-body); font-weight: 400; }
+
+  .chapter { height: calc(100svh + var(--chapter-runway)); }
+  .chapter__stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    padding: var(--pad-y) var(--pad-x);
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: 1fr auto;
+    column-gap: 24px;
+  }
+  .chapter__copy {
+    grid-area: 1 / 1;
+    align-self: center;
+    z-index: 2;
+    max-width: var(--measure-h1);
+    padding-top: calc(var(--brand-min-h) + var(--pad-y));
+  }
+  .specs { grid-area: 2 / 2; justify-self: end; width: min(100%, 480px); }
+
+  .shop { padding: calc(var(--pad-y) * 4) var(--pad-x); }
+  .shop__head {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+    column-gap: 24px;
+    align-items: end;
+    margin-bottom: 64px;
+  }
+  .shop__grid {
+    display: grid;
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: clamp(64px, 9vw, 136px);
+    align-items: start;
+  }
+  .card[data-slot="a1"] { grid-column: 1 / 4;  grid-row: 1; }
+  .card[data-slot="a2"] { grid-column: 4 / 7;  grid-row: 1; }
+  .card[data-slot="a3"] { grid-column: 9 / 17; grid-row: 1; }
+  .card[data-slot="b1"] { grid-column: 1 / 4;  grid-row: 2; }
+  .card[data-slot="b2"] { grid-column: 6 / 9;  grid-row: 2; }
+  .card[data-slot="b3"] { grid-column: 9 / 12; grid-row: 2; }
+}
+
+@layer components {
+  /* the wordmark: large on the first screen, then a small mark top-left, on the burger's line.
+     JS sets its box (--bw/--bh) and position (--bx/--by); glyphs and bars keep the logo's own proportion. */
+  .brand {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 11;
+    display: flex;
+    width: var(--bw, 60vw);
+    height: var(--bh, 18svh);
+    transform: translate(var(--bx, 20vw), var(--by, 70svh));
+    color: var(--ink);
+    pointer-events: auto;
+    --in-y: 0px;
+    --in-blur: 14px;
+  }
+  .brand__core { height: 100%; width: auto; flex: none; }
+  .brand__bar {
+    position: relative;
+    flex-basis: 0;
+    min-width: 0;
+    &::before {
+      content: "";
+      position: absolute;
+      inset-inline: -1px;
+      top: 61.39%;
+      height: 9.12%;
+      background: currentColor;
+    }
+  }
+  .burger {
+    pointer-events: auto;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 8px;
+    & span { display: block; width: 36px; height: 1.5px; background: var(--ink); }
+  }
+
+  .hero__nav a { transition: color .3s ease; }
+  @media (hover: hover) and (pointer: fine) { .hero__nav a:hover { color: var(--ink-64); } }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 24px;
+    background: var(--ink-08);
+    border-radius: 4px;
+    transition: background-color .3s ease, color .3s ease, scale .2s var(--ease-expo);
+    &:active { scale: .97; }
+  }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { background: var(--ink); color: var(--bg); } }
+
+  .chapter__statement { margin-top: 24px; font-weight: 400; }
+  .word { display: inline-block; white-space: pre; }
+
+  .specs__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--ink-24);
+    &:last-child { border-bottom: 1px solid var(--ink-24); }
+    & span:last-child { text-align: right; }
+  }
+
+  .shop__title { margin-left: -.04em; --in-y: 24px; --in-blur: 14px; }
+  .shop__lede { max-width: var(--measure-lead); }
+
+  .card {
+    display: block;
+    --in-y: 40px;
+    --in-blur: 12px;
+    transition: scale .2s var(--ease-expo);
+    &:active { scale: .985; }
+  }
+  .card__media {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--ink-08);
+    &.is-tall { aspect-ratio: 2 / 3; }
+    & img { width: 100%; height: 100%; object-fit: cover; transition: scale .7s var(--ease-expo); }
+  }
+  @media (hover: hover) and (pointer: fine) { .card:hover .card__media img { scale: 1.03; } }
+  .card__meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; }
+}
+
+@layer components {
+  /* type over the film: a deep brown burned into the image (colour burn), so it turns gold on pale ground
+     and deep red to near black over warm skin and sand.
+     The blend sits on each sticky stage (a stacking context of its own), which then blends with the film as one layer. */
+  .hero__stage, .chapter__stage, .chrome, .brand {
+    color: #4a2e18;
+    mix-blend-mode: color-burn;
+    --ink-64: rgb(74 46 24 / .72);
+    --ink-24: rgb(74 46 24 / .32);
+    --ink-08: rgb(74 46 24 / .1);
+  }
+  .chrome .burger span { background: currentColor; }
+  @media (hover: hover) and (pointer: fine) {
+    .hero__stage .btn:hover { background: var(--ink-24); color: inherit; }
+  }
+}
+
+@layer motion {
+  /* reveal contract: --in / --out (0→1) are written on each element by the one RAF loop */
+  [data-reveal] {
+    opacity: calc(var(--in, 1) * (1 - var(--out, 0)));
+    translate: 0 calc((1 - var(--in, 1)) * var(--in-y) - var(--out, 0) * var(--out-y));
+    &.is-anim { filter: blur(calc((1 - var(--in, 1)) * var(--in-blur) + var(--out, 0) * var(--out-blur))); }
+    &.is-hidden { visibility: hidden; }
+  }
+  .js [data-reveal] { --in: 0; }
+  .brand[data-reveal] { translate: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] { translate: none; &.is-anim { filter: none; } }
+    #stage.is-blurring { filter: none; }
+  }
+}
+
+@layer utilities {
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+}
+
+/* the one mobile breakpoint */
+@media (max-width: 767px) {
+  .hero__nav { display: none; }
+  .hero__stage { grid-template-columns: minmax(0, 1fr); }
+  .hero__mark { grid-area: 2 / 1; }
+  .chapter__stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
+  .chapter__copy { grid-area: 1 / 1; align-self: start; }
+  .specs { grid-area: 3 / 1; justify-self: stretch; width: 100%; }
+  .shop__head { grid-template-columns: minmax(0, 1fr); row-gap: 24px; margin-bottom: 40px; }
+  .shop__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 40px; }
+  .shop__grid .card { grid-column: auto; grid-row: auto; }
+  .shop__grid .card[data-slot="a3"] { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+
+<div id="stage" aria-hidden="true">
+  <canvas id="plate" class="plate"></canvas>
+</div>
+
+<a class="brand" href="#top" aria-label="IGOBE" data-reveal="display" style="--i:0">
+  <span class="brand__bar" style="flex-grow:.94"></span><svg class="brand__core" viewBox="540 384 1160 480" fill="currentColor" aria-hidden="true"><polygon points="637.55 535.13 598.62 513.54 581.07 550.3 619.45 571.89 637.55 535.13"/> <polygon points="1631.45 458.1 1592.52 436.51 1574.97 473.27 1613.35 494.86 1631.45 458.1"/> <polygon points="1685.73 435.34 1646.8 413.75 1629.26 449.93 1667.09 472.1 1685.73 435.34"/> <path d="M1732.61,722.44v-43.77h-128.03c0-15.17,1.65-29.18,4.93-42.02,4.02,1.56,7.59,2.73,10.7,3.5,3.1.78,5.76,1.56,7.95,2.33,4.02,1.17,7.49,1.95,10.42,2.33,2.92.39,5.84.58,8.77.58,11.7,0,21.02-3.11,27.96-9.34,8.41-6.61,12.61-16.72,12.61-30.34,0-23.34-3.84-43.77-11.52-61.27-8.77-19.45-20.29-29.18-34.54-29.18-19.38,0-34.36,16.15-44.96,48.43-8.42,26.84-12.61,57.97-12.61,93.36v21.59h-44.49s0-19.85,0-19.85c0-22.94-4.76-40.25-14.25-51.94-10.62-13.19-26.52-19.82-47.71-19.82-16.82,0-36.93,5.82-60.31,17.51-4.03,1.95-10.44,5.54-19.2,10.77-8.76,5.26-20.11,12.16-34,20.74,1.1-5.46,2.01-10.13,2.75-14,.73-3.9,1.28-7.21,1.65-9.94,2.2-14.39,3.3-27.81,3.3-40.25,0-14-1.65-31.32-4.94-51.94-1.83-10.49-3.92-20.82-6.3-30.93-2.38-10.1-5.02-20.24-7.95-30.34l3.29,1.17c4.03,1.56,6.93,2.34,8.76,2.34,1.1-3.12,1.93-6.15,2.48-9.05.55-2.92,1.18-5.73,1.91-8.46.37-2.34.81-6.24,1.36-11.69.55-5.43,1.2-12.44,1.93-20.99-11.72-1.17-21.03-3.51-27.96-7.01-9.15-4.68-15.01-10.88-17.55-18.68-1.83,4.29-3.48,8.77-4.94,13.42-1.47,4.68-2.75,9.35-3.84,14.03-2.17,9.32-3.82,19.07-4.92,29.17l14.8,7.57c1.8,8.18,3.56,15.67,5.21,22.46,1.65,6.82,3.19,12.94,4.66,18.4,2.2,10.88,4.21,20.99,6.04,30.34,1.8,9.33,3.27,17.9,4.37,25.67,3.3,21.8,4.94,41.64,4.94,59.51,0,7.4-.91,15.59-2.74,24.52-1.47,7.79-3.66,15.75-6.57,23.91-11.17,7.18-21.26,12.61-30.26,16.28-2.22.89-4.39,1.7-6.49,2.39-6.46,2.03-13.1,3.42-19.9,4.09h-5.23l-3.51-6.49-.99-1.84-26.84-49.8-25.92-48.07-30.26,22.69-112.15,84.09h-101.72l-1.1,2.92c-2.19-16.72-6.03-32.1-11.52-46.1-10.96-26.84-25.77-40.26-44.41-40.26-14.62,0-26.87,9.73-36.73,29.18-9.51,17.9-14.26,36.18-14.26,54.85,0,15.96,5.48,28.01,16.45,36.18,8.4,6.62,19.74,9.92,33.99,9.92h39.48c0,.78.18,1.37.55,1.75.36,1.95.55,4.48.55,7.59v11.09c0,10.12-2.83,19.46-8.5,28.01-5.67,8.56-12.98,15.96-21.93,22.17-8.96,6.23-19.19,11.19-30.7,14.88-11.52,3.7-22.94,5.94-34.27,6.71-9.87.78-19.56.2-29.06-1.75-9.51-1.94-17.91-5.05-25.22-9.33-8.77-5.44-15.26-12.93-19.46-22.47-4.21-9.53-6.3-19.93-6.3-31.22,0-10.5,1.1-21.39,3.29-32.68,1.46-8.55,4.57-19.26,9.32-32.1,1.46-4.67,3.2-9.63,5.21-14.88,2-5.25,4.11-10.8,6.31-16.63l-9.87-5.83c-3.29,6.62-5.58,11.29-6.85,14-1.29,2.73-3.02,7.2-5.21,13.42l-42.76.58h-58.67c-12.8-1.17-23.77-7.78-32.9-19.84-2.56-3.11-5.12-7.39-7.67-12.84-2.56-5.44-5.03-11.47-7.4-18.09-2.38-6.61-4.58-13.32-6.58-20.13-2.01-6.8-3.75-13.13-5.21-18.96l-25.22,15.17c.36,1.56.82,3.89,1.37,7,.55,3.12,1.18,6.42,1.92,9.92.73,3.5,1.37,6.81,1.92,9.92.55,3.12.82,5.25.82,6.42.36,2.33.55,4.77.55,7.29v7.3c0,11.67-4.58,19.46-13.71,23.34-5.48,2.33-14.62,3.5-27.42,3.5H33.7v43.77h552.3c7.31,0,13.52-.19,18.64-.58,5.11-.38,9.5-1.17,13.16-2.33,6.94-2.33,13.52-6.61,19.74-12.84,8.04,5.45,14.99,9.34,20.84,11.67,7.31,2.73,15.35,4.09,24.12,4.09h94.85c-2.19,8.95-3.84,18.67-4.93,29.18-1.1,10.5-1.65,20.04-1.65,28.59,0,29.57,10.42,50.96,31.26,64.19,9.5,6.22,19.92,10.7,31.25,13.42,11.33,2.72,22.84,3.69,34.54,2.92,14.25-.39,28.24-3.02,41.95-7.88,13.71-4.87,26.04-11.48,37.01-19.84,10.97-8.36,19.74-18.57,26.32-30.64,6.58-12.05,9.87-25.68,9.87-40.85v-39.1h105.02v-.09h10.79c1.84.94,3.79,1.87,5.96,2.74,13.18,5.07,29.71,7.6,49.46,7.6,30.96,0,56.02-3.53,75.17-10.56h7.45s6.7-.04,6.7-.04l35.91-.05v.08s250.59.25,250.59.25v.06h202.6ZM1633.64,573.06c6.58-8.55,12.79-12.84,18.64-12.84,4.75,0,8.41,1.95,10.97,5.83,2.55,3.12,3.84,7.59,3.84,13.42,0,13.23-6.95,19.84-20.84,19.84-4.02,0-7.86-.58-11.51-1.75-2.19-.78-4.3-1.65-6.31-2.63-2.01-.97-3.93-2.23-5.75-3.79,2.19-6.22,5.84-12.25,10.96-18.09ZM930.34,681.59c-5.85-.38-11.33-1.26-16.45-2.63-5.12-1.36-9.32-3.5-12.61-6.42-3.29-2.92-4.93-6.71-4.93-11.38,0-5.83,1.83-10.7,5.49-14.59,3.29-3.88,8.77-5.84,16.45-5.84,3.29,0,6.3.87,9.05,2.63,2.74,1.75,5.21,4.18,7.4,7.29,3.29,4.28,5.94,9.44,7.95,15.46,2.01,6.04,3.38,11.19,4.11,15.46-5.13.39-10.61.39-16.45,0ZM1234.34,676.35c-.76,6.7-4.08,12.09-9.99,16.09-7.28,4.63-17.17,6.93-29.56,6.93-13.55,0-29.02-2.48-46.48-7.46-16.92-5.34-19.82-9.44-19.82-13.37v-.13c.02-.51.15-1.04.32-1.57,2.07-5.79,9.17-13.4,32.29-21.85,1.33-.48,2.71-.96,4.11-1.47,11.83-4.27,24.5-8.52,38.02-12.8,11.31,7.82,18.32,12.8,21.13,14.93,6.79,6.05,10.16,11.91,10.16,17.61,0,1.06-.05,2.07-.17,3.09ZM1446.59,678.68h-103.08c3.58-2.45,7.25-4.82,11.04-7.07,1.6-.97,3.22-1.92,4.87-2.84,5.47-3.12,10.78-6.24,15.9-9.35,6.93-3.87,13.6-7.38,20.01-10.49,6.38-3.12,12.68-5.65,18.91-7.6,16.09-5.43,29.42-8.16,40.02-8.16,14.99,0,26.86,2.14,35.65,6.4,8.4,4.68,12.61,11.3,12.61,19.85,0,12.83-18.65,19.26-55.92,19.26Z"/> <polygon points="1206.67 536.88 1206.12 536.88 1167.19 515.87 1150.74 552.63 1188.57 573.64 1206.67 536.88"/> <polygon points="1260.4 514.7 1222.02 493.11 1204.47 529.29 1242.31 550.88 1260.4 514.7"/></svg><span class="brand__bar" style="flex-grow:.06"></span>
+</a>
+
+<header class="chrome">
+  <span></span>
+
+  <button class="burger" type="button" aria-label="Menu" aria-expanded="false" data-reveal style="--i:4"><span></span><span></span></button>
+</header>
+
+<main>
+  <section class="hero" id="top">
+    <div class="hero__stage">
+      <h1 class="sr-only">IGOBE. Sculptural solid perfume.</h1>
+      <nav class="hero__nav" aria-label="Primary">
+        <a class="t-ui" href="#hatshe" data-reveal style="--i:1">Scents</a>
+        <a class="t-ui" href="#shop" data-reveal style="--i:2">Shop</a>
+        <a class="t-ui" href="mailto:hello@igobe.example" data-reveal style="--i:3">Contact</a>
+      </nav>
+      <div class="hero__mark" aria-hidden="true"></div>
+      <div class="hero__foot">
+        <p class="hero__lede t-body-lg kr" data-reveal style="--i:5">모래 아래 잠든 유물을 손에 쥐는 향. 세 명의 파라오에게서 태어난, 피라미드 모양의 고체 향수입니다.</p>
+        <a class="hero__cta btn t-ui" href="#hatshe" data-reveal style="--i:6">Discover the scents</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- each chapter scrubs its own stretch of the film: data-t0 → data-t1 (seconds) -->
+  <section class="chapter" id="hatshe" data-t0="2.4">
+    <div class="chapter__stage">
+      <div class="chapter__copy">
+        <h2 class="chapter__name t-h2" data-reveal data-line="0">HATSHÉ</h2>
+        <p class="chapter__statement t-h1 kr" data-split="lines">스스로 파라오가 된 여왕. 기둥처럼 곧고, 절제되어 더 강한 향.</p>
+      </div>
+      <ul class="specs">
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">첫 향</span><span>Saffron, Pink pepper</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">가운데 향</span><span>Frankincense, Cedar</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">마지막 향</span><span>Amber, Vetiver</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">인상</span><span>권위 · 강인함 · 절제미</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="chapter" id="akhen" data-t0="7.6">
+    <div class="chapter__stage">
+      <div class="chapter__copy">
+        <h2 class="chapter__name t-h2" data-reveal data-line="0">AKHEN</h2>
+        <p class="chapter__statement t-h1 kr" data-split="lines">태양 원반 아텐만을 섬긴 왕. 정오의 빛처럼 뜨겁고 신성한 향.</p>
+      </div>
+      <ul class="specs">
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">첫 향</span><span>Blood orange, Ginger</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">가운데 향</span><span>Myrrh, Neroli</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">마지막 향</span><span>Labdanum, Sandalwood</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">인상</span><span>태양 · 신성함 · 에너지</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="chapter" id="tiye" data-t0="16.3">
+    <div class="chapter__stage">
+      <div class="chapter__copy">
+        <h2 class="chapter__name t-h2" data-reveal data-line="0">TIYE</h2>
+        <p class="chapter__statement t-h1 kr" data-split="lines">나일의 왕비 티예. 날개를 펼친 여신의 품처럼 우아하고 관능적인 향.</p>
+      </div>
+      <ul class="specs">
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">첫 향</span><span>Bergamot, Green fig</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">가운데 향</span><span>Blue lotus, Iris</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">마지막 향</span><span>White musk, Papyrus</span></li>
+        <li class="specs__row t-title" data-reveal><span class="is-demoted">인상</span><span>우아함 · 관능미 · 화려함</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="shop" id="shop">
+    <div class="shop__head">
+      <h2 class="shop__title t-display" data-reveal style="--i:0">Shop</h2>
+      <p class="shop__lede t-body-lg kr" data-reveal style="--i:1">첫 발굴에서 나온 여섯 점. 세 가지 향과 그 향을 담는 케이스, 그리고 아직 이름이 없는 하나.</p>
+    </div>
+    <div class="shop__grid">
+      <a class="card" data-slot="a1" href="#hatshe" data-reveal style="--i:2">
+        <div class="card__media is-tall"><img src="assets/still-hatshe.jpg" alt="모래 위에 놓인 노란 HATSHÉ 피라미드와 몸을 숙인 모델" loading="lazy" width="1080" height="1296"></div>
+        <div class="card__meta t-title"><span>HATSHÉ</span><span>₩68,000</span></div>
+        <p class="t-small is-demoted">Solid perfume, 8 g</p>
+      </a>
+      <a class="card" data-slot="a2" href="#akhen" data-reveal style="--i:3">
+        <div class="card__media"><img src="assets/still-akhen.jpg" alt="모델이 카메라 쪽으로 내민 AKHEN 모래시계 케이스" loading="lazy" width="1080" height="1080"></div>
+        <div class="card__meta t-title"><span>AKHEN</span><span>₩68,000</span></div>
+        <p class="t-small is-demoted">Solid perfume, 8 g</p>
+      </a>
+      <a class="card" data-slot="a3" href="#tiye" data-reveal style="--i:4">
+        <div class="card__media"><img src="assets/still-tiye.jpg" alt="손바닥 위에 올린 청록색 TIYE 피라미드" loading="lazy" width="1080" height="1080"></div>
+        <div class="card__meta t-title"><span>TIYE</span><span>₩68,000</span></div>
+        <p class="t-small is-demoted">Solid perfume, 8 g</p>
+      </a>
+      <a class="card" data-slot="b1" href="#shop" data-reveal style="--i:0">
+        <div class="card__media"><img src="assets/g1.jpg" alt="모래 언덕 위에 세워진 모래시계 모양 외부 케이스" loading="lazy" width="1242" height="1242"></div>
+        <div class="card__meta t-title"><span>Hourglass case</span><span>₩42,000</span></div>
+        <p class="t-small is-demoted">Case</p>
+      </a>
+      <a class="card" data-slot="b2" href="#shop" data-reveal style="--i:1">
+        <div class="card__media is-tall"><img src="assets/g2.jpg" alt="모래 위에 놓인 TIYE와 HATSHÉ 피라미드 두 개" loading="lazy" width="690" height="1242"></div>
+        <div class="card__meta t-title"><span>Pyramid duo</span><span>₩128,000</span></div>
+        <p class="t-small is-demoted">Set of two</p>
+      </a>
+      <a class="card" data-slot="b3" href="#shop" data-reveal style="--i:2">
+        <div class="card__media"><img src="assets/g4.jpg" alt="갈라진 흙 사이에 묻힌 UNKNOWN 케이스" loading="lazy" width="1242" height="1242"></div>
+        <div class="card__meta t-title"><span>UNKNOWN</span><span class="is-demoted">Soon</span></div>
+        <p class="t-small is-demoted">Unreleased</p>
+      </a>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+const root = document.documentElement
+const $ = (s, r = document) => r.querySelector(s)
+const $$ = (s, r = document) => [...r.querySelectorAll(s)]
+const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v)
+const expoOut = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t))
+const cubicOut = (t) => 1 - Math.pow(1 - t, 3)
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+const portraitMQ = matchMedia('(max-aspect-ratio: 3/4)')
+
+/* ---------- film: a bank of stills, drawn to one canvas ---------- */
+const FPS = 12
+const FRAME_COUNT = 291 /*FRAME_COUNT*/
+const FRAMES = window.__FRAMES || Array.from({ length: FRAME_COUNT }, (_, i) => `assets/frames/f${String(i + 1).padStart(3, '0')}.webp`)
+const N = FRAMES.length
+const DURATION = (N - 1) / FPS
+
+const imgs = new Array(N)
+const loaded = new Uint8Array(N)
+// coarse to fine, so the whole film is scrubbable early and fills in
+const order = []
+{
+  const seen = new Uint8Array(N)
+  for (const step of [24, 12, 6, 3, 1])
+    for (let i = 0; i < N; i += step) if (!seen[i]) { seen[i] = 1; order.push(i) }
+}
+let qi = 0
+let inflight = 0
+let dirty = true
+const pump = () => {
+  while (inflight < 8 && qi < order.length) {
+    const i = order[qi++]
+    if (loaded[i]) continue
+    inflight++
+    const im = new Image()
+    im.decoding = 'async'
+    const done = (ok) => {
+      inflight--
+      if (ok) { imgs[i] = im; loaded[i] = 1; dirty = true }
+      pump()
+    }
+    im.onload = () => (im.decode ? im.decode() : Promise.resolve()).then(() => done(true), () => done(true))
+    im.onerror = () => done(false)
+    im.src = FRAMES[i]
+  }
+}
+pump()
+
+const stage = $('#stage')
+const canvas = $('#plate')
+const ctx = canvas.getContext('2d', { alpha: false })
+let live = false
+const nearest = (i) => {
+  for (let d = 0; d < N; d++) {
+    if (i - d >= 0 && loaded[i - d]) return i - d
+    if (i + d < N && loaded[i + d]) return i + d
+  }
+  return -1
+}
+const paint = (im) => {
+  const W = canvas.width
+  const H = canvas.height
+  const iw = im.naturalWidth
+  const ih = im.naturalHeight
+  // always cover; on portrait screens this crops to the middle of the frame, where the models stand
+  const s = Math.max(W / iw, H / ih)
+  const w = iw * s
+  const h = ih * s
+  ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h)
+}
+const draw = (f) => {
+  const a = Math.floor(f)
+  const ia = nearest(a)
+  if (ia < 0) return false
+  ctx.globalAlpha = 1
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  paint(imgs[ia])
+  // blend into the next still, so 12 fps scrubs smoothly
+  const b = Math.min(N - 1, a + 1)
+  const k = f - a
+  if (ia === a && k > 0.02 && loaded[b]) {
+    ctx.globalAlpha = k
+    paint(imgs[b])
+    ctx.globalAlpha = 1
+  }
+  return true
+}
+
+/* ---------- reveal contract ---------- */
+const state = new WeakMap()
+const write = (el, vin, vout) => {
+  vin = Math.round(vin * 1000) / 1000
+  vout = Math.round(vout * 1000) / 1000
+  let s = state.get(el)
+  if (!s) { s = { in: -1, out: -1, anim: null, hidden: null }; state.set(el, s) }
+  if (s.in !== vin) { el.style.setProperty('--in', vin); s.in = vin }
+  if (s.out !== vout) { el.style.setProperty('--out', vout); s.out = vout }
+  const anim = (vin > 0 && vin < 1) || (vout > 0 && vout < 1)
+  const hidden = vin <= 0 || vout >= 1
+  if (anim !== s.anim) { el.classList.toggle('is-anim', anim); s.anim = anim }
+  if (hidden !== s.hidden) { el.classList.toggle('is-hidden', hidden); s.hidden = hidden }
+}
+const setVar = (() => {
+  const last = new WeakMap()
+  return (el, name, v) => {
+    v = Math.round(v * 1000) / 1000
+    let m = last.get(el)
+    if (!m) { m = {}; last.set(el, m) }
+    if (m[name] !== v) { el.style.setProperty(name, v); m[name] = v }
+  }
+})()
+
+const setPx = (() => {
+  const last = new WeakMap()
+  return (el, name, v) => {
+    v = Math.round(v * 10) / 10
+    let m = last.get(el)
+    if (!m) { m = {}; last.set(el, m) }
+    if (m[name] !== v) { el.style.setProperty(name, v + 'px'); m[name] = v }
+  }
+})()
+
+/* ---------- words: split each statement, group the words into lines ---------- */
+const splitWords = (el) => {
+  const text = el.textContent.trim()
+  el.setAttribute('aria-label', text)
+  el.textContent = ''
+  text.split(/\s+/).forEach((w, i, all) => {
+    const s = document.createElement('span')
+    s.className = 'word'
+    s.setAttribute('aria-hidden', 'true')
+    s.dataset.reveal = 'scroll'
+    s.textContent = w + (i < all.length - 1 ? ' ' : '')
+    el.appendChild(s)
+  })
+}
+$$('[data-split="lines"]').forEach(splitWords)
+const groupLines = (el) => {
+  let line = -1
+  let lastTop = null
+  for (const w of el.querySelectorAll('.word')) {
+    const t = w.offsetTop
+    if (lastTop === null || Math.abs(t - lastTop) > 4) { line++; lastTop = t }
+    w.dataset.line = line + 1 // line 0 belongs to the label and the name
+  }
+}
+
+/* ---------- elements ---------- */
+const brand = $('.brand')
+const burger = $('.burger')
+const hero = $('.hero')
+const heroNodes = $$('[data-reveal]', hero)
+const loadNodes = [brand, burger, ...heroNodes]
+const chapters = $$('.chapter').map((el) => ({
+  el,
+  t0: parseFloat(el.dataset.t0),
+  nodes: [...$$('.chapter__copy [data-reveal]', el), ...$$('.specs__row', el)],
+}))
+const shop = $('.shop')
+const flowNodes = $$('[data-reveal]', shop)
+
+/* ---------- layout, measured once and again on resize ---------- */
+let vh = innerHeight
+let heroTop = 0
+let heroSpan = 1
+let shopTop = 0
+let S2 = 1
+const LOGO_AR = 1705 / 480 // the whole wordmark, width : height (glyphs 1160, bars 545 of it)
+let mark = { h0: 1, x0: 0, y0: 0, h1: 1, x1: 0, y1: 0 }
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+const lerp = (a, b, t) => a + (b - a) * t
+let anchors = [[0, 0]]
+let needMeasure = true
+const pageTop = (el) => el.getBoundingClientRect().top + scrollY
+const measure = () => {
+  vh = innerHeight
+  // up to 2× on retina screens, so the 2560px frames are drawn at full detail
+  const dpr = Math.min(devicePixelRatio || 1, 2)
+  const cw = Math.round(canvas.clientWidth * dpr)
+  const ch = Math.round(canvas.clientHeight * dpr)
+  if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; dirty = true }
+
+  heroTop = pageTop(hero)
+  heroSpan = Math.max(1, hero.offsetHeight - vh)
+  for (const c of chapters) {
+    c.top = pageTop(c.el)
+    c.span = Math.max(1, c.el.offsetHeight - vh)
+    c.el.querySelectorAll('[data-split="lines"]').forEach(groupLines)
+    c.el.querySelectorAll('.specs__row').forEach((r, i) => (r.dataset.line = i))
+    c.nodes = [...c.el.querySelectorAll('.chapter__copy [data-reveal], .specs__row')]
+  }
+  shopTop = pageTop(shop)
+  S2 = shopTop - vh
+
+  // the film runs hero → each chapter → the edge of the shop
+  anchors = [[heroTop, 0], ...chapters.map((c) => [c.top, c.t0]), [S2, DURATION]]
+
+  // the wordmark: large in its slot on the first screen → small, top-left, centred on the burger's line
+  const cs = getComputedStyle($('.chrome'))
+  const padX = parseFloat(cs.paddingLeft)
+  const padY = parseFloat(cs.paddingTop)
+  const vw = root.clientWidth
+  const phone = vw < 768
+  const fullW = vw - 2 * padX
+  const h0 = Math.min(((phone ? 0.92 : 0.56) * fullW) / LOGO_AR, vh * (phone ? 0.14 : 0.22))
+  const h1 = phone ? 22 : 26
+  root.style.setProperty('--mark-h', h0.toFixed(1) + 'px')
+  const slot = $('.hero__mark').getBoundingClientRect()
+  mark = {
+    h0, x0: padX, y0: slot.top + scrollY - heroTop,
+    h1, x1: padX, y1: padY + (44 - h1) / 2,
+  }
+  needMeasure = false
+}
+addEventListener('resize', () => (needMeasure = true))
+portraitMQ.addEventListener?.('change', () => { needMeasure = true; dirty = true })
+
+const filmTime = (y) => {
+  if (y <= anchors[0][0]) return anchors[0][1]
+  for (let i = 1; i < anchors.length; i++) {
+    const [y1, t1] = anchors[i]
+    if (y <= y1) {
+      const [y0, t0] = anchors[i - 1]
+      return t0 + (t1 - t0) * clamp((y - y0) / Math.max(1, y1 - y0))
+    }
+  }
+  return DURATION
+}
+
+/* ---------- entrance ---------- */
+let readyAt = null
+const ready = () => {
+  if (readyAt !== null) return
+  root.classList.add('is-ready')
+  readyAt = performance.now()
+  needMeasure = true
+}
+;(document.fonts?.ready ?? Promise.resolve()).then(ready)
+setTimeout(ready, 2500)
+
+/* ---------- the one loop ---------- */
+let last = performance.now()
+let cur = 0
+let lastF = -1
+const frame = (now) => {
+  requestAnimationFrame(frame)
+  const dt = Math.min(0.1, (now - last) / 1000)
+  last = now
+  if (needMeasure) measure()
+  const y = Math.max(0, scrollY)
+
+  // whiteout into the shop
+  const so = clamp((y - S2) / (0.5 * vh))
+  setVar(stage, '--stage-out', so)
+  stage.classList.toggle('is-blurring', so > 0 && so < 1)
+  stage.classList.toggle('is-covered', so >= 1)
+
+  // film (text never lags; only the film eases toward its target)
+  if (so < 1) {
+    const target = reduced ? 0 : filmTime(y)
+    cur += (target - cur) * (1 - Math.exp(-dt * 8))
+    if (Math.abs(target - cur) < 0.002) cur = target
+    const f = clamp(cur * FPS, 0, N - 1)
+    if (dirty || Math.abs(f - lastF) > 0.001) {
+      if (draw(f)) {
+        lastF = f
+        dirty = false
+        if (!live) { canvas.classList.add('is-live'); live = true }
+      }
+    }
+  }
+
+  // wordmark
+  const p1 = clamp((y - heroTop) / heroSpan)
+  {
+    const t = reduced ? (p1 > 0.4 ? 1 : 0) : easeInOut(clamp(p1 / 0.7))
+    const h = lerp(mark.h0, mark.h1, t)
+    setPx(brand, '--bh', h)
+    setPx(brand, '--bw', h * LOGO_AR)
+    setPx(brand, '--bx', lerp(mark.x0, mark.x1, t))
+    setPx(brand, '--by', lerp(mark.y0, mark.y1, t))
+  }
+
+  // hero: in on load, out over the pin
+  for (const el of loadNodes) {
+    const i = parseFloat(el.style.getPropertyValue('--i')) || 0
+    const dur = el === brand ? 1.4 : 0.9
+    const vin = readyAt === null ? 0 : reduced ? 1 : expoOut(clamp((now - readyAt - i * 90) / (dur * 1000)))
+    let vout = 0
+    const j = heroNodes.indexOf(el)
+    if (j >= 0) vout = expoOut(clamp((p1 - (0.06 + j * 0.07)) / 0.45))
+    write(el, vin, vout)
+  }
+
+  // chapters: line by line in, then out
+  for (const c of chapters) {
+    const p = clamp((y - c.top) / c.span)
+    for (const el of c.nodes) {
+      const L = parseFloat(el.dataset.line) || 0
+      const vin = expoOut(clamp((p - (0.03 + L * 0.045)) / 0.15))
+      const vout = expoOut(clamp((p - (0.82 + L * 0.02)) / 0.12))
+      write(el, vin, vout)
+    }
+  }
+
+  // shop: by position on screen
+  for (const el of flowNodes) {
+    const top = el.getBoundingClientRect().top
+    const i = parseFloat(el.style.getPropertyValue('--i')) || 0
+    const e = clamp((0.92 * vh - top) / (0.3 * vh))
+    write(el, cubicOut(clamp((e - i * 0.11) / 0.6)), 0)
+  }
+}
+requestAnimationFrame(frame)
+</script>
+</body>
+</html>
