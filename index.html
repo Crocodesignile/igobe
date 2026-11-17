@@ -752,8 +752,11 @@ const frame = (now) => {
 
   // film (text never lags; only the film eases toward its target)
   if (so < 1) {
-    const target = reduced ? 0 : filmTime(y)
-    cur += (target - cur) * (1 - Math.exp(-dt * 8))
+    // the film only moves when the visitor scrolls, so it keeps following the scroll even with
+    // Reduce Motion on (iPhone 동작 줄이기); there it just skips the easing and tracks the scroll exactly
+    const target = filmTime(y)
+    if (reduced) cur = target
+    else cur += (target - cur) * (1 - Math.exp(-dt * 8))
     if (Math.abs(target - cur) < 0.002) cur = target
     const f = clamp(cur * FPS, 0, N - 1)
     if (dirty || Math.abs(f - lastF) > 0.001) {
@@ -829,7 +832,7 @@ if (new URLSearchParams(location.search).has('debug')) {
       'loaded ' + n + ' / ' + N + '  inflight ' + inflight + '  queue ' + qi,
       'anchors ' + anchors.map((a) => Math.round(a[0]) + ':' + a[1]).join(' '),
       'canvas ' + canvas.width + 'x' + canvas.height + '  live ' + live + '  dir ' + (window.__FRAMES ? 'inline' : FRAME_DIR),
-      'rAF/s ' + loops * 2 + '  vh ' + innerHeight + '  dpr ' + devicePixelRatio,
+      'rAF/s ' + loops * 2 + '  vh ' + innerHeight + '  dpr ' + devicePixelRatio + '  reduceMotion ' + reduced,
       errs.length ? 'ERR ' + errs.slice(-3).join(' | ') : 'no errors',
       navigator.userAgent.replace(/^Mozilla\/5.0 /, '').slice(0, 90),
     ].join('\n')
