@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IGOBE — Sculptural solid perfume</title>
-<meta name="description" content="모래 아래 잠든 유물을 손에 쥐는 향. 세 명의 파라오에게서 태어난 피라미드 모양의 고체 향수, IGOBE.">
+<meta name="description" content="모래 아래 잠든 유물을 손에 쥐는 향. 세&nbsp;명의 파라오에게서 태어난 피라미드 모양의 고체 향수, IGOBE.">
 <script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://api.fontshare.com">
 <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
@@ -171,6 +171,16 @@
     align-items: flex-start;
     gap: 24px;
   }
+  .hero__cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 7px;
+    transition: text-underline-offset .3s var(--ease-expo);
+  }
+  @media (hover: hover) and (pointer: fine) { .hero__cta:hover { text-underline-offset: 4px; } }
   .hero__lede { max-width: var(--measure-body); font-weight: 400; text-wrap: pretty; }
 
   .chapter { height: calc(100svh + var(--chapter-runway)); }
@@ -321,7 +331,6 @@
   }
   .chrome .burger span { background: currentColor; }
   @media (hover: hover) and (pointer: fine) {
-    .hero__stage .btn:hover { background: var(--ink-24); color: inherit; }
   }
 }
 
@@ -393,8 +402,8 @@
       </nav>
       <div class="hero__mark" aria-hidden="true"></div>
       <div class="hero__foot">
-        <p class="hero__lede t-body-lg kr" data-reveal style="--i:5">모래 아래 잠든 유물을 손에 쥐는&nbsp;향. 세 명의 파라오에게서 태어난, 피라미드 모양의 고체&nbsp;향수입니다.</p>
-        <a class="hero__cta btn t-ui" href="#hatshe" data-reveal style="--i:6">Discover the scents</a>
+        <p class="hero__lede t-body-lg kr" data-reveal style="--i:5">모래 아래 잠든 유물을 손에 쥐는&nbsp;향. 세&nbsp;명의 파라오에게서 태어난, 피라미드 모양의 고체&nbsp;향수입니다.</p>
+        <a class="hero__cta t-ui" href="#hatshe" data-reveal style="--i:6">Discover the scents</a>
       </div>
     </div>
   </section>
