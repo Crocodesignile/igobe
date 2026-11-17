@@ -87,8 +87,6 @@
     font-size: clamp(16px, 1.667vw, 20px);
     line-height: 1.45;
     letter-spacing: -.02em;
-    overscroll-behavior: none;
-    overflow-x: clip;
     word-break: keep-all;
   }
   a, button { touch-action: manipulation; }
@@ -529,7 +527,10 @@ const pump = () => {
       if (ok) { imgs[i] = im; loaded[i] = 1; dirty = true }
       pump()
     }
-    im.onload = () => (im.decode ? im.decode() : Promise.resolve()).then(() => done(true), () => done(true))
+    im.onload = () => {
+      const settle = new Promise((r) => setTimeout(r, 400))
+      Promise.race([im.decode ? im.decode() : Promise.resolve(), settle]).then(() => done(true), () => done(true))
+    }
     im.onerror = () => done(false)
     im.src = FRAMES[i]
   }
@@ -662,7 +663,10 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 const lerp = (a, b, t) => a + (b - a) * t
 let anchors = [[0, 0]]
 let needMeasure = true
-const pageTop = (el) => el.getBoundingClientRect().top + scrollY
+// read the scroll position however the browser exposes it (Safari can report window.scrollY as 0
+// when <body> ends up as the scroller)
+const scrollPos = () => window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+const pageTop = (el) => el.getBoundingClientRect().top + scrollPos()
 const measure = () => {
   vh = innerHeight
   // up to 2× on retina screens, so the 2560px frames are drawn at full detail
@@ -698,7 +702,7 @@ const measure = () => {
   root.style.setProperty('--mark-h', h0.toFixed(1) + 'px')
   const slot = $('.hero__mark').getBoundingClientRect()
   mark = {
-    h0, x0: padX, y0: slot.top + scrollY - heroTop,
+    h0, x0: padX, y0: slot.top + scrollPos() - heroTop,
     h1, x1: padX, y1: padY + (44 - h1) / 2,
   }
   needMeasure = false
@@ -738,7 +742,7 @@ const frame = (now) => {
   const dt = Math.min(0.1, (now - last) / 1000)
   last = now
   if (needMeasure) measure()
-  const y = Math.max(0, scrollY)
+  const y = Math.max(0, scrollPos())
 
   // whiteout into the shop
   const so = clamp((y - S2) / (0.5 * vh))
