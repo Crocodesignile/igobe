@@ -171,7 +171,7 @@
     align-items: flex-start;
     gap: 24px;
   }
-  .hero__lede { max-width: var(--measure-body); font-weight: 400; }
+  .hero__lede { max-width: var(--measure-body); font-weight: 400; text-wrap: pretty; }
 
   .chapter { height: calc(100svh + var(--chapter-runway)); }
   .chapter__stage {
@@ -288,7 +288,7 @@
   }
 
   .shop__title { margin-left: -.04em; --in-y: 24px; --in-blur: 14px; }
-  .shop__lede { max-width: var(--measure-lead); }
+  .shop__lede { max-width: var(--measure-lead); text-wrap: pretty; }
 
   .card {
     display: block;
@@ -355,6 +355,7 @@
   .hero__stage { grid-template-columns: minmax(0, 1fr); }
   /* phones: no large wordmark, only the small fixed one top-left */
   .hero__mark { display: none; }
+  .chapter__statement { font-size: clamp(22px, 6.9vw, 30px); }
   .chapter__stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
   .chapter__copy { grid-area: 1 / 1; align-self: start; }
   .specs { grid-area: 3 / 1; justify-self: stretch; width: 100%; }
@@ -392,7 +393,7 @@
       </nav>
       <div class="hero__mark" aria-hidden="true"></div>
       <div class="hero__foot">
-        <p class="hero__lede t-body-lg kr" data-reveal style="--i:5">모래 아래 잠든 유물을 손에 쥐는 향. 세 명의 파라오에게서 태어난, 피라미드 모양의 고체 향수입니다.</p>
+        <p class="hero__lede t-body-lg kr" data-reveal style="--i:5">모래 아래 잠든 유물을 손에 쥐는&nbsp;향. 세 명의 파라오에게서 태어난, 피라미드 모양의 고체&nbsp;향수입니다.</p>
         <a class="hero__cta btn t-ui" href="#hatshe" data-reveal style="--i:6">Discover the scents</a>
       </div>
     </div>
@@ -403,7 +404,7 @@
     <div class="chapter__stage">
       <div class="chapter__copy">
         <h2 class="chapter__name t-h2" data-reveal data-line="0">HATSHÉ</h2>
-        <p class="chapter__statement t-h1 kr" data-split="lines">스스로 파라오가 된 여왕. 기둥처럼 곧고, 절제되어 더 강한 향.</p>
+        <p class="chapter__statement t-h1 kr" data-split="lines">스스로 파라오가 된 여왕. / 기둥처럼 곧고, / 절제되어 더 강한 향.</p>
       </div>
       <ul class="specs">
         <li class="specs__row t-title" data-reveal><span class="is-demoted">첫 향</span><span>Saffron, Pink pepper</span></li>
@@ -418,7 +419,7 @@
     <div class="chapter__stage">
       <div class="chapter__copy">
         <h2 class="chapter__name t-h2" data-reveal data-line="0">AKHEN</h2>
-        <p class="chapter__statement t-h1 kr" data-split="lines">태양 원반 아텐만을 섬긴 왕. 정오의 빛처럼 뜨겁고 신성한 향.</p>
+        <p class="chapter__statement t-h1 kr" data-split="lines">태양 원반 아텐만을 섬긴 왕. / 정오의 빛처럼 / 뜨겁고 신성한 향.</p>
       </div>
       <ul class="specs">
         <li class="specs__row t-title" data-reveal><span class="is-demoted">첫 향</span><span>Blood orange, Ginger</span></li>
@@ -433,7 +434,7 @@
     <div class="chapter__stage">
       <div class="chapter__copy">
         <h2 class="chapter__name t-h2" data-reveal data-line="0">TIYE</h2>
-        <p class="chapter__statement t-h1 kr" data-split="lines">나일의 왕비 티예. 날개를 펼친 여신의 품처럼 우아하고 관능적인 향.</p>
+        <p class="chapter__statement t-h1 kr" data-split="lines">나일의 왕비 티예. / 날개를 펼친 여신의 품처럼 / 우아하고 관능적인 향.</p>
       </div>
       <ul class="specs">
         <li class="specs__row t-title" data-reveal><span class="is-demoted">첫 향</span><span>Bergamot, Green fig</span></li>
@@ -447,7 +448,7 @@
   <section class="shop" id="shop">
     <div class="shop__head">
       <h2 class="shop__title t-display" data-reveal style="--i:0">Shop</h2>
-      <p class="shop__lede t-body-lg kr" data-reveal style="--i:1">첫 발굴에서 나온 여섯 점. 세 가지 향과 그 향을 담는 케이스, 그리고 아직 이름이 없는 하나.</p>
+      <p class="shop__lede t-body-lg kr" data-reveal style="--i:1">첫 발굴에서 나온 여섯&nbsp;점. 세 가지 향과 그 향을 담는 케이스, 그리고 아직 이름이 없는&nbsp;하나.</p>
     </div>
     <div class="shop__grid">
       <a class="card" data-slot="a1" href="#hatshe" data-reveal style="--i:2">
@@ -616,16 +617,24 @@ const setPx = (() => {
 
 /* ---------- words: split each statement, group the words into lines ---------- */
 const splitWords = (el) => {
+  // the copy marks its line breaks with " / " (chosen by meaning); within a phrase the last two words
+  // stay together, so a word like "향." never sits alone on a line
   const text = el.textContent.trim()
-  el.setAttribute('aria-label', text)
+  const phrases = text.split(/\s*\/\s*/)
+  el.setAttribute('aria-label', phrases.join(' '))
   el.textContent = ''
-  text.split(/\s+/).forEach((w, i, all) => {
-    const s = document.createElement('span')
-    s.className = 'word'
-    s.setAttribute('aria-hidden', 'true')
-    s.dataset.reveal = 'scroll'
-    s.textContent = w + (i < all.length - 1 ? ' ' : '')
-    el.appendChild(s)
+  phrases.forEach((ph, pi) => {
+    const words = ph.split(/\s+/)
+    if (words.length > 2) words.splice(-2, 2, words.slice(-2).join(' '))
+    words.forEach((w, i) => {
+      const s = document.createElement('span')
+      s.className = 'word'
+      s.setAttribute('aria-hidden', 'true')
+      s.dataset.reveal = 'scroll'
+      s.textContent = w + (i < words.length - 1 ? ' ' : '')
+      el.appendChild(s)
+    })
+    if (pi < phrases.length - 1) el.appendChild(document.createElement('br'))
   })
 }
 $$('[data-split="lines"]').forEach(splitWords)
