@@ -28,6 +28,8 @@ html = re.sub(r"<!--LOGO-->.*?<!--/LOGO-->", svg, html, flags=re.S)
 
 # images
 html = re.sub(r'src="(assets/[^"]+)"', lambda m: f'src="{data_uri(ROOT / m.group(1))}"', html)
+# CSS backgrounds: url("assets/...")
+html = re.sub(r'url\("(assets/[^"]+)"\)', lambda m: f'url("{data_uri(ROOT / m.group(1))}")', html)
 
 # frames
 frames = sorted((ROOT / "assets/frames").glob("f*.webp"))

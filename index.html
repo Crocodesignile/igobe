@@ -362,18 +362,30 @@
     place-content: center;
     justify-items: center;
     gap: 18px;
-    background: var(--bg);
+    background: #efe6d6 url("assets/splash-bg.jpg") center / cover no-repeat;
     color: var(--ink);
-    transition: opacity .8s cubic-bezier(.4, 0, .2, 1) .5s;
-    &.is-leaving { opacity: 0; pointer-events: none; }
+    &.is-leaving { pointer-events: none; }
+    /* leaving: the jackals become a window onto the film, and the window opens until it is the screen.
+       JS sets the window's box (--wx/--wy/--ww/--wh) and the frame it is cut from (--wimg). */
+    &.is-window {
+      -webkit-mask-image: var(--wimg), linear-gradient(#000, #000);
+      mask-image: var(--wimg), linear-gradient(#000, #000);
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: var(--ww) var(--wh), 100% 100%;
+      mask-size: var(--ww) var(--wh), 100% 100%;
+      -webkit-mask-position: var(--wx) var(--wy), 0 0;
+      mask-position: var(--wx) var(--wy), 0 0;
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
   }
   .splash__run {
     width: min(58vw, 340px);
     height: auto;
-    /* leaving, they run on out of frame: accelerating, the way they were already heading */
-    transition: translate .7s cubic-bezier(.55, 0, .8, .25), opacity .3s ease .4s;
   }
-  .splash.is-leaving .splash__run { translate: -80vw 0; opacity: 0; }
+  /* the window replaces the drawn jackals the moment it opens */
+  .splash.is-window .splash__run { visibility: hidden; }
   .splash__count {
     margin: 0;
     color: var(--ink-64);
@@ -387,7 +399,7 @@
   html.is-arriving .plate { filter: blur(18px); scale: 1.06; }
   @media (prefers-reduced-motion: reduce) {
     .splash { transition: opacity .6s ease; }
-    .splash.is-leaving .splash__run { translate: none; }
+    .splash.is-leaving { opacity: 0; }
     html.is-arriving .plate { filter: none; scale: none; }
   }
 }
@@ -430,6 +442,13 @@
     <img src="assets/jackal/j5.webp" alt="" width="480" height="260">
     <img src="assets/jackal/j6.webp" alt="" width="480" height="260">
     <img src="assets/jackal/j7.webp" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m1.png" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m2.png" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m3.png" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m4.png" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m5.png" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m6.png" alt="" width="480" height="260">
+    <img class="splash__mask" src="assets/jackal/m7.png" alt="" width="480" height="260">
   </div>
 </div>
 
@@ -817,7 +836,9 @@ const ready = () => {
   const run = splash.querySelector('.splash__run')
   const rctx = run.getContext('2d')
   const num = splash.querySelector('.splash__num')
-  const jackals = [...splash.querySelectorAll('.splash__frames img')]
+  const jackals = [...splash.querySelectorAll('.splash__frames img:not(.splash__mask)')]
+  // solid silhouettes of the same frames: the window is cut from these, so no scraps of the splash float over the film
+  const masks = [...splash.querySelectorAll('.splash__mask')]
   const needed = order.findIndex((i) => i % 6 !== 0)  // every 6th frame: the film already scrubs whole
   const need = needed > 0 ? needed : order.length
   const t0 = performance.now()
@@ -863,9 +884,45 @@ const ready = () => {
     splash.classList.add('is-leaving')
     root.classList.remove('is-loading')
     needMeasure = true
-    // the film pulls into focus as the white starts to clear, and the hero type follows
-    setTimeout(() => { root.classList.remove('is-arriving'); ready() }, 550)
-    setTimeout(() => { gone = true; splash.remove() }, 1500)
+    if (reduced) {
+      // no window: a plain fade
+      setTimeout(() => { root.classList.remove('is-arriving'); ready() }, 200)
+      setTimeout(() => { gone = true; splash.remove() }, 700)
+      return
+    }
+    // the jackals stop on the frame they were in, and that frame becomes a window onto the film
+    const im = masks[(k - 1 + masks.length) % masks.length]
+    const box = run.getBoundingClientRect()
+    // the window opens around the front jackal's chest, so the film pours out of the jackal
+    const fx = box.left + box.width * 0.24
+    const fy = box.top + box.height * 0.44
+    const cover = Math.hypot(innerWidth, innerHeight) / (box.height * 0.18)  // big enough that the chest covers the screen
+    splash.style.setProperty('--wimg', `url("${im.currentSrc || im.src}")`)
+    const place = (scale) => {
+      const w = box.width * scale
+      const h = box.height * scale
+      splash.style.setProperty('--ww', w + 'px')
+      splash.style.setProperty('--wh', h + 'px')
+      splash.style.setProperty('--wx', fx - (fx - box.left) * scale + 'px')
+      splash.style.setProperty('--wy', fy - (fy - box.top) * scale + 'px')
+    }
+    place(1)
+    splash.classList.add('is-window')
+    const HOLD = 420     // a beat with the film showing through the still jackals
+    const OPEN = 1250    // then the window opens
+    const t1 = performance.now()
+    let released = false
+    const open = (now) => {
+      const t = now - t1
+      const u = clamp((t - HOLD) / OPEN)
+      // slow at first, then rushing open
+      const e = u < 1 ? Math.pow(u, 3.2) : 1
+      place(1 + (cover - 1) * e)
+      if (!released && u > 0.25) { released = true; root.classList.remove('is-arriving'); ready() }
+      if (u < 1) requestAnimationFrame(open)
+      else { gone = true; splash.remove() }
+    }
+    requestAnimationFrame(open)
   }
   requestAnimationFrame(tick)
 }
