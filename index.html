@@ -352,8 +352,9 @@
 /* the one mobile breakpoint */
 @media (max-width: 767px) {
   .hero__nav { display: none; }
-  .hero__stage { grid-template-columns: minmax(0, 1fr); }
-  .hero__mark { grid-area: 2 / 1; }
+  .hero__stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto auto; }
+  .hero__foot { grid-area: 3 / 1; }
+  .hero__mark { grid-area: 4 / 1; margin: 28px 0 0; }
   .chapter__stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
   .chapter__copy { grid-area: 1 / 1; align-self: start; }
   .specs { grid-area: 3 / 1; justify-self: stretch; width: 100%; }
@@ -548,17 +549,18 @@ const nearest = (i) => {
   }
   return -1
 }
-const paint = (im) => {
-  const W = canvas.width
-  const H = canvas.height
-  const iw = im.naturalWidth
-  const ih = im.naturalHeight
-  // always cover; on portrait screens this crops to the middle of the frame, where the models stand
-  const s = Math.max(W / iw, H / ih)
-  const w = iw * s
-  const h = ih * s
-  ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h)
+// always cover; on portrait screens this crops to the middle of the frame, where the models stand
+const cover = (im, W, H) => {
+  const s = Math.max(W / im.naturalWidth, H / im.naturalHeight)
+  const w = im.naturalWidth * s
+  const h = im.naturalHeight * s
+  return { x: (W - w) / 2, y: (H - h) / 2, w, h }
 }
+const paint = (im, c = ctx) => {
+  const r = cover(im, c.canvas.width, c.canvas.height)
+  c.drawImage(im, r.x, r.y, r.w, r.h)
+}
+
 const draw = (f) => {
   const a = Math.floor(f)
   const ia = nearest(a)
@@ -697,7 +699,7 @@ const measure = () => {
   const vw = root.clientWidth
   const phone = vw < 768
   const fullW = vw - 2 * padX
-  const h0 = Math.min(((phone ? 0.92 : 0.56) * fullW) / LOGO_AR, vh * (phone ? 0.14 : 0.22))
+  const h0 = Math.min(((phone ? 1 : 0.56) * fullW) / LOGO_AR, vh * (phone ? 0.16 : 0.22))
   const h1 = phone ? 22 : 26
   root.style.setProperty('--mark-h', h0.toFixed(1) + 'px')
   const slot = $('.hero__mark').getBoundingClientRect()
