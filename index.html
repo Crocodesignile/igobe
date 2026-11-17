@@ -130,7 +130,7 @@
     width: 100%;
     height: 100%;
     opacity: 0;
-    transition: opacity 240ms linear;
+    transition: opacity 240ms linear, filter 1.5s var(--ease-expo), scale 1.8s var(--ease-expo);
     &.is-live { opacity: 1; }
   }
 
@@ -364,27 +364,31 @@
     gap: 18px;
     background: var(--bg);
     color: var(--ink);
-    clip-path: inset(0 0 0 0);
-    transition: clip-path 1s var(--ease-expo);
-    &.is-leaving { clip-path: inset(0 0 100% 0); }
+    transition: opacity .8s cubic-bezier(.4, 0, .2, 1) .5s;
+    &.is-leaving { opacity: 0; pointer-events: none; }
   }
   .splash__run {
     width: min(58vw, 340px);
     height: auto;
-    transition: opacity .5s ease, translate 1s var(--ease-expo);
+    /* leaving, they run on out of frame: accelerating, the way they were already heading */
+    transition: translate .7s cubic-bezier(.55, 0, .8, .25), opacity .3s ease .4s;
   }
-  .splash.is-leaving .splash__run { opacity: 0; translate: 0 -24px; }
+  .splash.is-leaving .splash__run { translate: -80vw 0; opacity: 0; }
   .splash__count {
     margin: 0;
     color: var(--ink-64);
     font-variant-numeric: tabular-nums;
     min-width: 3ch;
     text-align: center;
-    transition: opacity .4s ease;
+    transition: opacity .3s ease;
   }
   .splash.is-leaving .splash__count { opacity: 0; }
+  /* the film behind starts out of focus and pulls sharp as the white clears */
+  html.is-arriving .plate { filter: blur(18px); scale: 1.06; }
   @media (prefers-reduced-motion: reduce) {
-    .splash { transition: opacity .6s ease; &.is-leaving { clip-path: none; opacity: 0; } }
+    .splash { transition: opacity .6s ease; }
+    .splash.is-leaving .splash__run { translate: none; }
+    html.is-arriving .plate { filter: none; scale: none; }
   }
 }
 
@@ -819,13 +823,14 @@ const ready = () => {
   const t0 = performance.now()
   let fontsIn = false
   ;(document.fonts?.ready ?? Promise.resolve()).then(() => (fontsIn = true))
-  root.classList.add('is-loading')
+  root.classList.add('is-loading', 'is-arriving')
   let k = 0
   let lastSwap = 0
   let shown = 0
   let leaving = false
+  let gone = false
   const tick = (now) => {
-    if (leaving) return
+    if (gone) return
     requestAnimationFrame(tick)
     // the jackals, in ink, 12 frames a second (one still frame when motion is reduced)
     if ((now - lastSwap > 1000 / 12 || lastSwap === 0) && (!reduced || lastSwap === 0)) {
@@ -841,6 +846,7 @@ const ready = () => {
         k++
       }
     }
+    if (leaving) return
     let got = 0
     for (let i = 0; i < need; i++) got += loaded[order[i]]
     const target = Math.round((got / need) * 100)
@@ -857,8 +863,9 @@ const ready = () => {
     splash.classList.add('is-leaving')
     root.classList.remove('is-loading')
     needMeasure = true
-    ready()
-    setTimeout(() => splash.remove(), 1100)
+    // the film pulls into focus as the white starts to clear, and the hero type follows
+    setTimeout(() => { root.classList.remove('is-arriving'); ready() }, 550)
+    setTimeout(() => { gone = true; splash.remove() }, 1500)
   }
   requestAnimationFrame(tick)
 }
