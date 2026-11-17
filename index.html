@@ -116,7 +116,12 @@
   /* the film plate, fixed behind everything */
   #stage {
     position: fixed;
-    inset: 0;
+    /* the largest viewport height, so the plate does not resize (and flash) when a phone's address bar slides away */
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100vh;
+    height: 100lvh;
     z-index: 0;
     pointer-events: none;
     opacity: calc(1 - var(--stage-out, 0));
@@ -493,7 +498,10 @@ const portraitMQ = matchMedia('(max-aspect-ratio: 3/4)')
 /* ---------- film: a bank of stills, drawn to one canvas ---------- */
 const FPS = 12
 const FRAME_COUNT = 291 /*FRAME_COUNT*/
-const FRAMES = window.__FRAMES || Array.from({ length: FRAME_COUNT }, (_, i) => `assets/frames/f${String(i + 1).padStart(3, '0')}.webp`)
+// phones get a light portrait set (720×1280, centre crop); larger screens the 3200px set
+const PHONE = matchMedia('(max-width: 767px)').matches
+const FRAME_DIR = PHONE ? 'assets/frames-m' : 'assets/frames'
+const FRAMES = window.__FRAMES || Array.from({ length: FRAME_COUNT }, (_, i) => `${FRAME_DIR}/f${String(i + 1).padStart(3, '0')}.webp`)
 const N = FRAMES.length
 const DURATION = (N - 1) / FPS
 
