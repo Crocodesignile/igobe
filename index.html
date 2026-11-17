@@ -352,9 +352,9 @@
 /* the one mobile breakpoint */
 @media (max-width: 767px) {
   .hero__nav { display: none; }
-  .hero__stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto auto; }
-  .hero__foot { grid-area: 3 / 1; }
-  .hero__mark { grid-area: 4 / 1; margin: 28px 0 0; }
+  .hero__stage { grid-template-columns: minmax(0, 1fr); }
+  /* phones: no large wordmark, only the small fixed one top-left */
+  .hero__mark { display: none; }
   .chapter__stage { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
   .chapter__copy { grid-area: 1 / 1; align-self: start; }
   .specs { grid-area: 3 / 1; justify-self: stretch; width: 100%; }
@@ -707,6 +707,8 @@ const measure = () => {
     h0, x0: padX, y0: slot.top + scrollPos() - heroTop,
     h1, x1: padX, y1: padY + (44 - h1) / 2,
   }
+  // phones keep the small mark fixed top-left from the start; it never travels across the frame
+  if (phone) Object.assign(mark, { h0: h1, x0: mark.x1, y0: mark.y1 })
   needMeasure = false
 }
 addEventListener('resize', () => (needMeasure = true))
