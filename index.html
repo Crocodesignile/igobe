@@ -16,7 +16,7 @@
   Structure after the "Orla." reference prompt: one fixed film plate scrubbed by scroll,
   a large wordmark on the first screen that shrinks to the top-left corner, pinned chapters whose words rise and fall
   with the scroll, and a white shop the film fades into.
-  Film: IGOBE_film_v4_4K (24 s) → 12 fps WebP frames, 2560px, quality 75, drawn to one canvas.
+  Film: IGOBE_film_v4_4K (24 s) → 24 fps WebP frames, 2560px, quality 75, drawn to one canvas.
   Latin type: Switzer. Korean: Pretendard (Switzer has no Hangul).
 */
 @layer reset, tokens, base, layout, components, motion, utilities;
@@ -560,8 +560,8 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 const portraitMQ = matchMedia('(max-aspect-ratio: 3/4)')
 
 /* ---------- film: a bank of stills, drawn to one canvas ---------- */
-const FPS = 12
-const FRAME_COUNT = 291 /*FRAME_COUNT*/
+const FPS = 24
+const FRAME_COUNT = 581 /*FRAME_COUNT*/
 // phones get a light portrait set (720×1280, centre crop); larger screens the 3200px set
 const PHONE = matchMedia('(max-width: 767px)').matches
 const FRAME_DIR = PHONE ? 'assets/frames-m' : 'assets/frames'
@@ -577,7 +577,7 @@ const loaded = new Uint8Array(N)
 const order = []
 {
   const seen = new Uint8Array(N)
-  for (const step of [24, 12, 6, 3, 1])
+  for (const step of [48, 24, 12, 6, 2, 1])
     for (let i = 0; i < N; i += step) if (!seen[i]) { seen[i] = 1; order.push(i) }
 }
 let qi = 0
@@ -615,10 +615,10 @@ const bmp = new Map()          // frame index → decoded ImageBitmap
 const pending = new Set()
 let bmpKey = ''
 let bmpInflight = 0
-const AHEAD = PHONE ? 6 : 6    // decoded beyond where the film is heading
-const BEHIND = PHONE ? 3 : 3
-const SPAN = PHONE ? 24 : 16   // at most this many stills kept decoded at once (desktop stills are 15 MB decoded)
-const MAX_DECODES = PHONE ? 4 : 6
+const AHEAD = PHONE ? 10 : 10  // decoded beyond where the film is heading (24 stills = 1 s of film)
+const BEHIND = PHONE ? 4 : 4
+const SPAN = PHONE ? 36 : 22   // at most this many stills kept decoded at once (desktop stills are 15 MB decoded)
+const MAX_DECODES = PHONE ? 6 : 6
 let travel = 1
 const resetBitmaps = () => {
   for (const b of bmp.values()) b.close?.()
@@ -848,7 +848,7 @@ const ready = () => {
 }
 
 /* ---------- splash: jackals run until enough of the film is in, then the screen lifts ----------
-   "Enough" is the coarse passes of the loading order (every 6th frame), so the whole film scrubs
+   "Enough" is the coarse passes of the loading order (every 12th still, two per second of film), so the whole film scrubs
    without gaps from the start; the rest fills in behind. Shown at least 1.4 s, at most 9 s. */
 {
   const splash = $('#splash')
@@ -856,7 +856,7 @@ const ready = () => {
   const rctx = run.getContext('2d')
   const num = splash.querySelector('.splash__num')
   const jackals = [...splash.querySelectorAll('.splash__frames img')]
-  const needed = order.findIndex((i) => i % 6 !== 0)  // every 6th frame: the film already scrubs whole
+  const needed = order.findIndex((i) => i % 12 !== 0)  // every 12th still (2 a second): the film already scrubs whole
   const need = needed > 0 ? needed : order.length
   const t0 = performance.now()
   let fontsIn = false
